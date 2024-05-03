@@ -182,22 +182,66 @@ def print_df_result_colorama(df_disks, size_mode=None):
     # compute bar width
     max_nonbar_width = 0
     max_size = 0
+    max_chars = {}
+    max_chars['use'] = len('83.6%')
+    columns = [
+        {
+            'title': 'mount',
+            'max_chars': 20,
+            'fmt': '%-20s',
+            'tfmt': '%-20s',
+        }, {
+            'title': 'device',
+            'max_chars': 14,
+            'fmt': '%14s',
+            'tfmt': '%14s',
+        }, {
+            'title': 'size',
+            'max_chars': 10,
+            'fmt': '%10s',
+            'tfmt': '%10s',
+        }, {
+            'title': 'free',
+            'max_chars': 10,
+            'fmt': '%10s',
+            'tfmt': '%10s',
+        }, {
+            'title': 'use',
+            'max_chars': 7,
+            'fmt': ' %4.1f%% ',
+            'tfmt': ' %5s ',
+        }, {
+            'title': size_mode,
+            'max_chars': -1,  # variable
+            'fmt': None, # special case
+            'tfmt': '%-12s',
+        }
+    ]
+
     for disk in df_disks:
         use_ratio = disk['used'] / disk['size']
         pre_str = '%4.1f%% %10s' % (100*use_ratio, h(disk['size']))
         post_str = '| %10s %14s %s' % (h(disk['avail']), disk['device_path'], disk['root_mount'])
-        nonbar_width = 2 + len(pre_str) + len(post_str)
-        max_nonbar_width = max(nonbar_width, max_nonbar_width)
         max_size = max(disk['size'], max_size)
 
+    max_nonbar_width = 1  # +1 is a fudge factor
+    pre_str_fmt = ''
+    title_fmt = ''
+    title_vals = []
+    for c in columns:
+        if c['max_chars'] > 0:
+            max_nonbar_width += c['max_chars']
+        if c['fmt']:
+            pre_str_fmt += c['fmt']
+        if c['tfmt']:
+             title_fmt += c['tfmt']
+             title_vals.append(c['title'])
+            
     # print header
-    bar_width = W - max_nonbar_width  # need some checks here
-    pre_str = '%4s %10s   %12s' % ('use', 'size', size_mode)
-    post_str = '  %10s' % ('free')
-    s = pre_str + ' ' * (bar_width-15) + post_str
-    print(s)
+    print(title_fmt % tuple(title_vals))
 
     # print usage bars
+    bar_width = W - max_nonbar_width  # need some checks here
     df_disks.sort(key=lambda x: x['size'])
     # TODO use two different scales, for <500GB and >=500GB
     for disk in df_disks:
@@ -205,8 +249,8 @@ def print_df_result_colorama(df_disks, size_mode=None):
         color = Back.GREEN
         if disk['avail'] < 10e6 or use_ratio > .95:
             color = Back.RED
-        pre_str = '%4.1f%% %10s ' % (100*use_ratio, h(disk['size']))
-        post_str = '%10s %-14s %20s' % (h(disk['avail']), disk['device_path'], disk['root_mount'])
+        pre_str = pre_str_fmt % (disk['root_mount'], disk['device_path'], h(disk['size']), h(disk['avail']), 100*use_ratio)
+        post_str = ''
 
         if size_mode == 'fill':
             used_count = int(use_ratio * bar_width)
@@ -217,8 +261,6 @@ def print_df_result_colorama(df_disks, size_mode=None):
             used_count = int(disk['used'] / bytes_per_column)
             free_count = int(disk['avail'] / bytes_per_column)
             pad_count = W - 2 - len(pre_str + post_str) - used_count - free_count
-
-        # db()
 
         bar = '|' + Fore.BLACK + color + ' ' * used_count + Fore.WHITE + Back.BLACK + ' ' * free_count + Style.RESET_ALL + '|' + ' ' * pad_count
         s = pre_str + bar + post_str
