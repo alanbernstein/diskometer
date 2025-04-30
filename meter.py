@@ -95,7 +95,7 @@ def draw_meter(stdscr):
         print(m)
 
 
-ignore_list = ['/boot/efi']
+ignore_list = ['/boot/efi', '/sys/firmware/efi/efivars']
 
 df_keys = ['device_path', 'fstype', 'size', 'used', 'avail', 'used_pct', 'root_mount']
 widths = [14, 7, 5, 5, 5, 4, 20]  # manually determined from output of `df`
@@ -306,7 +306,11 @@ def get_df_result():
     ignore_cmd_fragment = ' ' .join(['-x %s' % f for f in ignore_fs])
     df_cmd = 'df -T %s' % ignore_cmd_fragment
 
-    output = subprocess.check_output(df_cmd, shell=True)
+    try:
+        output = subprocess.check_output(df_cmd, shell=True)
+    except Exception as exc:
+        print(exc)
+        db()
     lines = output.strip().decode('utf-8').split('\n')
 
     disks = []
