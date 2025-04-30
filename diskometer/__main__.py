@@ -333,5 +333,5 @@ def get_df_result():
     return disks
 
 
-
-main()
+if __name__ == '__main__':
+    main()
