@@ -249,7 +249,11 @@ def print_df_result_colorama(df_disks, size_mode=None):
         color = Back.GREEN
         if disk['avail'] < 10e6 or use_ratio > .95:
             color = Back.RED
-        pre_str = pre_str_fmt % (disk['root_mount'], disk['device_path'], h(disk['size']), h(disk['avail']), 100*use_ratio)
+        root_mount = disk['root_mount']
+        if len(root_mount) > columns[0]['max_chars']:
+            start = len(root_mount) - columns[0]['max_chars'] + 3 + 1
+            root_mount = '...' + root_mount[start:]
+        pre_str = pre_str_fmt % (root_mount, disk['device_path'], h(disk['size']), h(disk['avail']), 100*use_ratio)
         post_str = ''
 
         if size_mode == 'fill':
