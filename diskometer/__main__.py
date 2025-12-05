@@ -306,16 +306,25 @@ def human_readable(d):
 
 
 def get_df_result():
-    ignore_fs = ['squashfs', 'tmpfs', 'devtmpfs']
+    # Exclude problematic filesystem types including network/remote mounts
+    ignore_fs = ['squashfs', 'tmpfs', 'devtmpfs', 'fuse', 'nfs', 'nfs4', 'cifs', 'smbfs', 'autofs']
     ignore_cmd_fragment = ' ' .join(['-x %s' % f for f in ignore_fs])
     df_cmd = 'df -T %s' % ignore_cmd_fragment
 
     try:
-        output = subprocess.check_output(df_cmd, shell=True)
+        # Use subprocess.run() to capture output even if df exits with non-zero status
+        # (which happens when some mounts have errors, but valid data is still in stdout)
+        result = subprocess.run(df_cmd, shell=True, capture_output=True, text=True)
+        output = result.stdout
+
+        if not output.strip():
+            # Only if we got no output at all should we return empty
+            return []
     except Exception as exc:
-        print(exc)
-        db()
-    lines = output.strip().decode('utf-8').split('\n')
+        print(f"Warning: unexpected error running df: {exc}")
+        return []
+
+    lines = output.strip().split('\n')
 
     disks = []
     for line in lines:
