@@ -16,7 +16,7 @@ def main():
     if '-f' in sys.argv:
         curses.wrapper(draw_meter)
     else:
-        print_df_result_colorama(get_df_result())
+        print_df_result_colorama(*get_df_result())
 
 
 def draw_meter(stdscr):
@@ -71,7 +71,7 @@ def draw_meter(stdscr):
             stdscr.addstr(0, 0, timestamp)
 
             # disk space meters
-            df_result = get_df_result()
+            df_result, df_errs = get_df_result()
 
             print_df_result_curses(stdscr, df_result, size_mode)
 
@@ -170,7 +170,7 @@ def print_df_result_nice(df_disks):
         print(fmtstr % tuple(disk.values()))
     pass
 
-def print_df_result_colorama(df_disks, size_mode=None):
+def print_df_result_colorama(df_disks, df_errs, size_mode=None):
     size_mode = size_mode or 'proportional'  # or 'fill'
 
     res = os.get_terminal_size()
@@ -237,6 +237,10 @@ def print_df_result_colorama(df_disks, size_mode=None):
              title_fmt += c['tfmt']
              title_vals.append(c['title'])
             
+            
+    for e in df_errs:
+        print(e)
+        
     # print header
     print(title_fmt % tuple(title_vals))
 
@@ -316,6 +320,7 @@ def get_df_result():
         # (which happens when some mounts have errors, but valid data is still in stdout)
         result = subprocess.run(df_cmd, shell=True, capture_output=True, text=True)
         output = result.stdout
+        err = result.stderr
 
         if not output.strip():
             # Only if we got no output at all should we return empty
@@ -324,8 +329,10 @@ def get_df_result():
         print(f"Warning: unexpected error running df: {exc}")
         return []
 
-    lines = output.strip().split('\n')
+    errs = err.strip().split('\n')
+    errs = [e for e in errs if '.mount' not in e]
 
+    lines = output.strip().split('\n')
     disks = []
     for line in lines:
         parts = line.split()
@@ -343,7 +350,7 @@ def get_df_result():
         disk['used_pct'] = int(disk['used_pct'][:-1])
         disks.append(disk)
 
-    return disks
+    return disks, errs
 
 
 if __name__ == '__main__':

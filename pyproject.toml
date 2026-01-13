@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "diskometer"
-version = "0.1.0"
+version = "0.2.0"
 description = "CLI visual disk space indicator"
 dependencies = ["colorama", "ipdb"]  # or list your dependencies here
 scripts = { diskometer = "diskometer.__main__:main" }
